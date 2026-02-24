@@ -61,11 +61,13 @@ async def stream_analysis(
         f"{_build_market_data(holdings)}\n\n"
         f"Please analyze this portfolio and provide 3-5 specific, actionable "
         f"recommendations. Be concrete — mention specific tickers to buy, sell, "
-        f"or adjust. Format your response in well-structured markdown."
+        f"or adjust. Format your response in well-structured markdown. "
+        f"Do not add any additional filler or additional information, "
+        f"respond simply with the recommendation. Do not use any emojis."
     )
 
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-6")
+    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
     with client.messages.stream(
         model=model,
