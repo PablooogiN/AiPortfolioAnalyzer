@@ -11,7 +11,7 @@ from database import Base, engine, get_db
 from models import Holding
 from schemas import AnalyzeRequest, HoldingCreate, HoldingResponse, HoldingUpdate
 from services.ai_service import stream_analysis
-from services.stock_service import enrich_holdings
+from services.stock_service import enrich_holdings, get_prices
 
 Base.metadata.create_all(bind=engine)
 
@@ -77,13 +77,13 @@ def portfolio_summary(db: Session = Depends(get_db)):
     holdings = db.query(Holding).all()
     if not holdings:
         return {"holdings": [], "total_value": 0, "total_cost": 0}
-    enriched = enrich_holdings(holdings)
-    total_value = sum(h["current_value"] for h in enriched)
-    total_cost = sum(h["shares"] * h["avg_cost"] for h in enriched)
-    for h in enriched:
+    priced = get_prices(holdings)
+    total_value = sum(h["current_value"] for h in priced)
+    total_cost = sum(h["shares"] * h["avg_cost"] for h in priced)
+    for h in priced:
         h["weight"] = round(h["current_value"] / total_value * 100, 2) if total_value else 0
     return {
-        "holdings": enriched,
+        "holdings": priced,
         "total_value": round(total_value, 2),
         "total_cost": round(total_cost, 2),
         "total_gain_loss": round(total_value - total_cost, 2),

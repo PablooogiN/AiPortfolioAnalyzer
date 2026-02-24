@@ -65,9 +65,10 @@ async def stream_analysis(
     )
 
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    model = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-6")
 
     with client.messages.stream(
-        model="claude-sonnet-4-6-20250514",
+        model=model,
         max_tokens=2048,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
