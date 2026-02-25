@@ -5,12 +5,11 @@ load_dotenv()
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sse_starlette.sse import EventSourceResponse
 
 from database import Base, engine, get_db
 from models import Holding
-from schemas import AnalyzeRequest, HoldingCreate, HoldingResponse, HoldingUpdate
-from services.ai_service import stream_analysis
+from schemas import AnalyzeRequest, AnalysisResponse, HoldingCreate, HoldingResponse, HoldingUpdate
+from services.ai_service import analyze
 from services.stock_service import enrich_holdings, get_prices
 
 Base.metadata.create_all(bind=engine)
@@ -93,10 +92,10 @@ def portfolio_summary(db: Session = Depends(get_db)):
     }
 
 
-# ── AI Analysis (SSE streaming) ───────────────────────────────
+# ── AI Analysis ────────────────────────────────────────────────
 
 
-@app.post("/api/analyze")
+@app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_portfolio(body: AnalyzeRequest, db: Session = Depends(get_db)):
     holdings = db.query(Holding).all()
     if not holdings:
@@ -105,4 +104,4 @@ async def analyze_portfolio(body: AnalyzeRequest, db: Session = Depends(get_db))
     total_value = sum(h["current_value"] for h in enriched)
     for h in enriched:
         h["weight"] = round(h["current_value"] / total_value * 100, 2) if total_value else 0
-    return EventSourceResponse(stream_analysis(enriched, body.strategy))
+    return await analyze(enriched, body.strategy)

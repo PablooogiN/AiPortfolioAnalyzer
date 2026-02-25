@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getPortfolio, streamAnalysis } from "./api/client";
-import type { PortfolioSummary } from "./types";
+import { useCallback, useEffect, useState } from "react";
+import { analyzePortfolio, getPortfolio } from "./api/client";
+import type { AnalysisData, PortfolioSummary } from "./types";
 import AddHoldingForm from "./components/AddHoldingForm";
 import HoldingsTable from "./components/HoldingsTable";
 import StrategySelector from "./components/StrategySelector";
@@ -10,10 +10,9 @@ export default function App() {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
   const [strategy, setStrategy] = useState("value");
-  const [analysisContent, setAnalysisContent] = useState("");
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     setLoadingPortfolio(true);
@@ -31,21 +30,20 @@ export default function App() {
     fetchPortfolio();
   }, [fetchPortfolio]);
 
-  const handleAnalyze = () => {
-    if (abortRef.current) abortRef.current.abort();
-    setAnalysisContent("");
+  const handleAnalyze = async () => {
+    setAnalysisData(null);
     setAnalysisError("");
     setAnalysisLoading(true);
-
-    abortRef.current = streamAnalysis(
-      strategy,
-      (chunk) => setAnalysisContent((prev) => prev + chunk),
-      () => setAnalysisLoading(false),
-      (err) => {
-        setAnalysisError(err);
-        setAnalysisLoading(false);
-      }
-    );
+    try {
+      const result = await analyzePortfolio(strategy);
+      setAnalysisData(result);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Analysis failed";
+      setAnalysisError(message);
+    } finally {
+      setAnalysisLoading(false);
+    }
   };
 
   const hasHoldings = (portfolio?.holdings.length ?? 0) > 0;
@@ -101,7 +99,7 @@ export default function App() {
           />
           <div className="mt-6 border-t border-gray-100 pt-6">
             <AnalysisResult
-              content={analysisContent}
+              data={analysisData}
               loading={analysisLoading}
               error={analysisError}
             />

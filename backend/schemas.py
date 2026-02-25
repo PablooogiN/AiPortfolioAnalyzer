@@ -31,3 +31,16 @@ class HoldingResponse(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     strategy: str = Field(..., min_length=1)
+
+
+class Recommendation(BaseModel):
+    action: str
+    ticker: str
+    rationale: str
+
+
+class AnalysisResponse(BaseModel):
+    summary: str
+    key_findings: list[str]
+    recommendations: list[Recommendation]
+    risk_warnings: list[str]

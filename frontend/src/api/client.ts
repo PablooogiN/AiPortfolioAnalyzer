@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Holding, PortfolioSummary } from "../types";
+import type { AnalysisData, Holding, PortfolioSummary } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
 
@@ -32,62 +32,9 @@ export async function getPortfolio(): Promise<PortfolioSummary> {
   return data;
 }
 
-export function streamAnalysis(
-  strategy: string,
-  onChunk: (text: string) => void,
-  onDone: () => void,
-  onError: (err: string) => void
-): AbortController {
-  const controller = new AbortController();
-
-  fetch("/api/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ strategy }),
-    signal: controller.signal,
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        const err = await response.json();
-        onError(err.detail || "Analysis failed");
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        onError("No response body");
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") {
-              onDone();
-              return;
-            }
-            onChunk(data);
-          }
-        }
-      }
-      onDone();
-    })
-    .catch((err) => {
-      if (err.name !== "AbortError") {
-        onError(err.message);
-      }
-    });
-
-  return controller;
+export async function analyzePortfolio(
+  strategy: string
+): Promise<AnalysisData> {
+  const { data } = await api.post<AnalysisData>("/analyze", { strategy });
+  return data;
 }

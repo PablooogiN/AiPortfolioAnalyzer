@@ -37,3 +37,16 @@ export interface Strategy {
   label: string;
   description: string;
 }
+
+export interface Recommendation {
+  action: string;
+  ticker: string;
+  rationale: string;
+}
+
+export interface AnalysisData {
+  summary: string;
+  key_findings: string[];
+  recommendations: Recommendation[];
+  risk_warnings: string[];
+}
