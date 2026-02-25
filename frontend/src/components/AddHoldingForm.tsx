@@ -8,9 +8,8 @@ interface Props {
 export default function AddHoldingForm({ onAdded }: Props) {
   const [ticker, setTicker] = useState("");
   const [shares, setShares] = useState("");
-  const [avgCost, setAvgCost] = useState("");
-  const [dateAdded, setDateAdded] = useState(
-    new Date().toISOString().slice(0, 10)
+  const [accountType, setAccountType] = useState<"pre-tax" | "post-tax">(
+    "post-tax"
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,12 +22,10 @@ export default function AddHoldingForm({ onAdded }: Props) {
       await createHolding({
         ticker: ticker.toUpperCase().trim(),
         shares: parseFloat(shares),
-        avg_cost: parseFloat(avgCost),
-        date_added: dateAdded,
+        account_type: accountType,
       });
       setTicker("");
       setShares("");
-      setAvgCost("");
       onAdded();
     } catch {
       setError("Failed to add holding. Check your inputs.");
@@ -69,30 +66,18 @@ export default function AddHoldingForm({ onAdded }: Props) {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Avg Cost ($)
+          Account Type
         </label>
-        <input
-          type="number"
-          value={avgCost}
-          onChange={(e) => setAvgCost(e.target.value)}
-          placeholder="150.00"
-          required
-          min="0.01"
-          step="any"
-          className="w-32 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Date Added
-        </label>
-        <input
-          type="date"
-          value={dateAdded}
-          onChange={(e) => setDateAdded(e.target.value)}
-          required
+        <select
+          value={accountType}
+          onChange={(e) =>
+            setAccountType(e.target.value as "pre-tax" | "post-tax")
+          }
           className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        >
+          <option value="post-tax">Post-Tax</option>
+          <option value="pre-tax">Pre-Tax</option>
+        </select>
       </div>
       <button
         type="submit"

@@ -47,22 +47,15 @@ def get_prices(holdings: list[Holding]) -> list[dict]:
     for holding in holdings:
         current_price = prices.get(holding.ticker, 0.0)
         current_value = holding.shares * current_price
-        cost_basis = holding.shares * holding.avg_cost
-        gain_loss = current_value - cost_basis
-        gain_loss_pct = (gain_loss / cost_basis * 100) if cost_basis else 0
 
         result.append(
             {
                 "id": holding.id,
                 "ticker": holding.ticker,
                 "shares": holding.shares,
-                "avg_cost": holding.avg_cost,
-                "date_added": holding.date_added,
+                "account_type": holding.account_type,
                 "current_price": round(current_price, 2),
                 "current_value": round(current_value, 2),
-                "cost_basis": round(cost_basis, 2),
-                "gain_loss": round(gain_loss, 2),
-                "gain_loss_pct": round(gain_loss_pct, 2),
                 "weight": 0,
                 "sector": "N/A",
                 "industry": "N/A",
@@ -93,10 +86,6 @@ def enrich_holdings(holdings: list[Holding]) -> list[dict]:
             cp = info["currentPrice"]
             item["current_price"] = round(cp, 2)
             item["current_value"] = round(item["shares"] * cp, 2)
-            cost_basis = item["shares"] * item["avg_cost"]
-            gain = item["current_value"] - cost_basis
-            item["gain_loss"] = round(gain, 2)
-            item["gain_loss_pct"] = round(gain / cost_basis * 100, 2) if cost_basis else 0
 
         item["market_cap"] = info.get("marketCap")
         item["pe_ratio"] = info.get("trailingPE")

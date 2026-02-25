@@ -5,16 +5,14 @@ from services.chain_factory import build_chain
 
 def _build_portfolio_table(holdings: list[dict]) -> str:
     lines = [
-        "| Ticker | Shares | Avg Cost | Current Price | Value | Weight | Gain/Loss | Sector |",
-        "|--------|--------|----------|---------------|-------|--------|-----------|--------|",
+        "| Ticker | Shares | Account Type | Current Price | Value | Weight | Sector |",
+        "|--------|--------|--------------|---------------|-------|--------|--------|",
     ]
     for h in holdings:
-        sign = "+" if h["gain_loss"] >= 0 else ""
         lines.append(
-            f"| {h['ticker']} | {h['shares']} | ${h['avg_cost']:.2f} | "
+            f"| {h['ticker']} | {h['shares']} | {h['account_type']} | "
             f"${h['current_price']:.2f} | ${h['current_value']:,.2f} | "
-            f"{h['weight']:.1f}% | {sign}{h['gain_loss_pct']:.1f}% | "
-            f"{h['sector']} |"
+            f"{h['weight']:.1f}% | {h['sector']} |"
         )
     return "\n".join(lines)
 
@@ -40,21 +38,31 @@ def _build_market_data(holdings: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _build_user_message(holdings: list[dict]) -> str:
+def _build_user_message(holdings: list[dict], cash: dict) -> str:
     total_value = sum(h["current_value"] for h in holdings)
-    total_cost = sum(h["shares"] * h["avg_cost"] for h in holdings)
-    total_gl = total_value - total_cost
-    total_gl_pct = (total_gl / total_cost * 100) if total_cost else 0
+    pre_tax_cash = cash.get("pre_tax_cash", 0)
+    post_tax_cash = cash.get("post_tax_cash", 0)
+    total_portfolio = total_value + pre_tax_cash + post_tax_cash
+
+    cash_section = (
+        f"## Cash Positions\n\n"
+        f"- Pre-tax (e.g. 401k/IRA): ${pre_tax_cash:,.2f}\n"
+        f"- Post-tax (taxable brokerage): ${post_tax_cash:,.2f}\n"
+        f"- Total cash: ${pre_tax_cash + post_tax_cash:,.2f}"
+    )
 
     return (
-        f"## My Portfolio (Total Value: ${total_value:,.2f}, "
-        f"Overall Gain/Loss: {'+' if total_gl >= 0 else ''}{total_gl_pct:.1f}%)\n\n"
+        f"## My Portfolio (Total Invested Value: ${total_value:,.2f}, "
+        f"Total Including Cash: ${total_portfolio:,.2f})\n\n"
         f"{_build_portfolio_table(holdings)}\n\n"
+        f"{cash_section}\n\n"
         f"## Key Market Data\n\n"
         f"{_build_market_data(holdings)}\n\n"
         f"Please analyze this portfolio and provide 3-5 specific, actionable "
         f"recommendations. Be concrete \u2014 mention specific tickers to buy, sell, "
-        f"or adjust. Format your response in well-structured markdown. "
+        f"or adjust. Consider the tax implications of each account type when "
+        f"making recommendations (e.g., tax-efficient placement of assets). "
+        f"Format your response in well-structured markdown. "
         f"Do not add any additional filler or additional information, "
         f"respond simply with the recommendation. Do not use any emojis."
     )
@@ -134,10 +142,10 @@ def _parse_response(text: str) -> dict:
     }
 
 
-async def analyze(holdings: list[dict], strategy_key: str) -> dict:
+async def analyze(holdings: list[dict], strategy_key: str, cash: dict) -> dict:
     """Run the AI analysis and return parsed structured JSON."""
     chain = build_chain(strategy_key)
-    user_input = _build_user_message(holdings)
+    user_input = _build_user_message(holdings, cash)
 
     result = await chain.ainvoke({"user_input": user_input})
     raw_text = result.content if hasattr(result, "content") else str(result)

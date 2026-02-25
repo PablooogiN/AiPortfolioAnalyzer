@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { analyzePortfolio, getPortfolio } from "./api/client";
 import type { AnalysisData, PortfolioSummary } from "./types";
 import AddHoldingForm from "./components/AddHoldingForm";
+import CashPositions from "./components/CashPositions";
 import HoldingsTable from "./components/HoldingsTable";
 import StrategySelector from "./components/StrategySelector";
 import AnalysisResult from "./components/AnalysisResult";
@@ -47,6 +48,10 @@ export default function App() {
   };
 
   const hasHoldings = (portfolio?.holdings.length ?? 0) > 0;
+  const totalPortfolioValue = portfolio?.total_portfolio_value ?? 0;
+  const totalInvested = portfolio?.total_value ?? 0;
+  const totalCash =
+    (portfolio?.pre_tax_cash ?? 0) + (portfolio?.post_tax_cash ?? 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -68,9 +73,37 @@ export default function App() {
           <AddHoldingForm onAdded={fetchPortfolio} />
         </section>
 
+        {/* Cash Positions */}
+        <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4">Cash Positions</h2>
+          <CashPositions onUpdated={fetchPortfolio} />
+        </section>
+
         {/* Portfolio Table */}
         <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold mb-4">Your Portfolio</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Your Portfolio</h2>
+            {totalPortfolioValue > 0 && (
+              <div className="text-sm text-gray-600">
+                Invested:{" "}
+                <span className="font-semibold">
+                  ${totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+                {totalCash > 0 && (
+                  <>
+                    {" "}| Cash:{" "}
+                    <span className="font-semibold">
+                      ${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                    {" "}| Total:{" "}
+                    <span className="font-semibold">
+                      ${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           {loadingPortfolio ? (
             <p className="text-gray-400 text-center py-8">
               Loading portfolio...
@@ -79,9 +112,6 @@ export default function App() {
             <HoldingsTable
               holdings={portfolio?.holdings ?? []}
               totalValue={portfolio?.total_value ?? 0}
-              totalCost={portfolio?.total_cost ?? 0}
-              totalGainLoss={portfolio?.total_gain_loss ?? 0}
-              totalGainLossPct={portfolio?.total_gain_loss_pct ?? 0}
               onRefresh={fetchPortfolio}
             />
           )}

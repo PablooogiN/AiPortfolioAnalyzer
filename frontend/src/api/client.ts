@@ -1,5 +1,10 @@
 import axios from "axios";
-import type { AnalysisData, Holding, PortfolioSummary } from "../types";
+import type {
+  AnalysisData,
+  CashPositions,
+  Holding,
+  PortfolioSummary,
+} from "../types";
 
 const api = axios.create({ baseURL: "/api" });
 
@@ -29,6 +34,18 @@ export async function deleteHolding(id: number): Promise<void> {
 
 export async function getPortfolio(): Promise<PortfolioSummary> {
   const { data } = await api.get<PortfolioSummary>("/portfolio");
+  return data;
+}
+
+export async function getCash(): Promise<CashPositions> {
+  const { data } = await api.get<CashPositions>("/cash");
+  return data;
+}
+
+export async function updateCash(
+  cash: CashPositions
+): Promise<CashPositions> {
+  const { data } = await api.put<CashPositions>("/cash", cash);
   return data;
 }
 

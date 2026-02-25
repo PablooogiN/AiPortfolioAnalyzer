@@ -4,18 +4,12 @@ import { deleteHolding } from "../api/client";
 interface Props {
   holdings: EnrichedHolding[];
   totalValue: number;
-  totalCost: number;
-  totalGainLoss: number;
-  totalGainLossPct: number;
   onRefresh: () => void;
 }
 
 export default function HoldingsTable({
   holdings,
   totalValue,
-  totalCost,
-  totalGainLoss,
-  totalGainLossPct,
   onRefresh,
 }: Props) {
   const handleDelete = async (id: number, ticker: string) => {
@@ -39,11 +33,10 @@ export default function HoldingsTable({
           <tr>
             <th className="px-4 py-3">Ticker</th>
             <th className="px-4 py-3 text-right">Shares</th>
-            <th className="px-4 py-3 text-right">Avg Cost</th>
+            <th className="px-4 py-3">Account Type</th>
             <th className="px-4 py-3 text-right">Current Price</th>
             <th className="px-4 py-3 text-right">Value</th>
             <th className="px-4 py-3 text-right">Weight</th>
-            <th className="px-4 py-3 text-right">Gain/Loss</th>
             <th className="px-4 py-3">Sector</th>
             <th className="px-4 py-3"></th>
           </tr>
@@ -53,7 +46,17 @@ export default function HoldingsTable({
             <tr key={h.id} className="hover:bg-gray-50">
               <td className="px-4 py-3 font-semibold">{h.ticker}</td>
               <td className="px-4 py-3 text-right">{h.shares}</td>
-              <td className="px-4 py-3 text-right">${h.avg_cost.toFixed(2)}</td>
+              <td className="px-4 py-3">
+                <span
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                    h.account_type === "pre-tax"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-blue-100 text-blue-800"
+                  }`}
+                >
+                  {h.account_type === "pre-tax" ? "Pre-Tax" : "Post-Tax"}
+                </span>
+              </td>
               <td className="px-4 py-3 text-right">
                 ${h.current_price.toFixed(2)}
               </td>
@@ -63,14 +66,6 @@ export default function HoldingsTable({
                 })}
               </td>
               <td className="px-4 py-3 text-right">{h.weight.toFixed(1)}%</td>
-              <td
-                className={`px-4 py-3 text-right font-medium ${
-                  h.gain_loss >= 0 ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {h.gain_loss >= 0 ? "+" : ""}
-                {h.gain_loss_pct.toFixed(1)}%
-              </td>
               <td className="px-4 py-3 text-gray-500">{h.sector}</td>
               <td className="px-4 py-3">
                 <button
@@ -95,18 +90,6 @@ export default function HoldingsTable({
               })}
             </td>
             <td className="px-4 py-3 text-right">100%</td>
-            <td
-              className={`px-4 py-3 text-right ${
-                totalGainLoss >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {totalGainLoss >= 0 ? "+" : ""}$
-              {Math.abs(totalGainLoss).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}{" "}
-              ({totalGainLoss >= 0 ? "+" : ""}
-              {totalGainLossPct.toFixed(1)}%)
-            </td>
             <td colSpan={2}></td>
           </tr>
         </tfoot>

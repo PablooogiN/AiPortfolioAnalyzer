@@ -7,8 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
-from models import Holding
-from schemas import AnalyzeRequest, AnalysisResponse, HoldingCreate, HoldingResponse, HoldingUpdate
+from models import Holding, PortfolioSettings
+from schemas import (
+    AnalyzeRequest,
+    AnalysisResponse,
+    CashPositionsResponse,
+    CashPositionsUpdate,
+    HoldingCreate,
+    HoldingResponse,
+    HoldingUpdate,
+)
 from services.ai_service import analyze
 from services.stock_service import enrich_holdings, get_prices
 
@@ -68,6 +76,31 @@ def delete_holding(holding_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
+# ── Cash Positions ─────────────────────────────────────────────
+
+
+@app.get("/api/cash", response_model=CashPositionsResponse)
+def get_cash(db: Session = Depends(get_db)):
+    settings = db.query(PortfolioSettings).first()
+    if not settings:
+        return CashPositionsResponse(pre_tax_cash=0.0, post_tax_cash=0.0)
+    return settings
+
+
+@app.put("/api/cash", response_model=CashPositionsResponse)
+def update_cash(body: CashPositionsUpdate, db: Session = Depends(get_db)):
+    settings = db.query(PortfolioSettings).first()
+    if not settings:
+        settings = PortfolioSettings(**body.model_dump())
+        db.add(settings)
+    else:
+        settings.pre_tax_cash = body.pre_tax_cash
+        settings.post_tax_cash = body.post_tax_cash
+    db.commit()
+    db.refresh(settings)
+    return settings
+
+
 # ── Portfolio Summary ──────────────────────────────────────────
 
 
@@ -75,20 +108,22 @@ def delete_holding(holding_id: int, db: Session = Depends(get_db)):
 def portfolio_summary(db: Session = Depends(get_db)):
     holdings = db.query(Holding).all()
     if not holdings:
-        return {"holdings": [], "total_value": 0, "total_cost": 0}
+        return {"holdings": [], "total_value": 0}
     priced = get_prices(holdings)
     total_value = sum(h["current_value"] for h in priced)
-    total_cost = sum(h["shares"] * h["avg_cost"] for h in priced)
     for h in priced:
         h["weight"] = round(h["current_value"] / total_value * 100, 2) if total_value else 0
+
+    settings = db.query(PortfolioSettings).first()
+    pre_tax_cash = settings.pre_tax_cash if settings else 0.0
+    post_tax_cash = settings.post_tax_cash if settings else 0.0
+
     return {
         "holdings": priced,
         "total_value": round(total_value, 2),
-        "total_cost": round(total_cost, 2),
-        "total_gain_loss": round(total_value - total_cost, 2),
-        "total_gain_loss_pct": round((total_value - total_cost) / total_cost * 100, 2)
-        if total_cost
-        else 0,
+        "pre_tax_cash": pre_tax_cash,
+        "post_tax_cash": post_tax_cash,
+        "total_portfolio_value": round(total_value + pre_tax_cash + post_tax_cash, 2),
     }
 
 
@@ -104,4 +139,10 @@ async def analyze_portfolio(body: AnalyzeRequest, db: Session = Depends(get_db))
     total_value = sum(h["current_value"] for h in enriched)
     for h in enriched:
         h["weight"] = round(h["current_value"] / total_value * 100, 2) if total_value else 0
-    return await analyze(enriched, body.strategy)
+
+    settings = db.query(PortfolioSettings).first()
+    cash = {
+        "pre_tax_cash": settings.pre_tax_cash if settings else 0.0,
+        "post_tax_cash": settings.post_tax_cash if settings else 0.0,
+    }
+    return await analyze(enriched, body.strategy, cash)

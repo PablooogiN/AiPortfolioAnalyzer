@@ -2,16 +2,12 @@ export interface Holding {
   id: number;
   ticker: string;
   shares: number;
-  avg_cost: number;
-  date_added: string;
+  account_type: "pre-tax" | "post-tax";
 }
 
 export interface EnrichedHolding extends Holding {
   current_price: number;
   current_value: number;
-  cost_basis: number;
-  gain_loss: number;
-  gain_loss_pct: number;
   weight: number;
   sector: string;
   industry: string;
@@ -24,12 +20,17 @@ export interface EnrichedHolding extends Holding {
   fifty_two_week_low: number | null;
 }
 
+export interface CashPositions {
+  pre_tax_cash: number;
+  post_tax_cash: number;
+}
+
 export interface PortfolioSummary {
   holdings: EnrichedHolding[];
   total_value: number;
-  total_cost: number;
-  total_gain_loss: number;
-  total_gain_loss_pct: number;
+  pre_tax_cash: number;
+  post_tax_cash: number;
+  total_portfolio_value: number;
 }
 
 export interface Strategy {
